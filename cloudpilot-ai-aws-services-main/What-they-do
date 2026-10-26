@@ -1,0 +1,71 @@
+### 1. Core Application
+
+| Feature                    | Status                |
+| -------------------------- | --------------------- |
+| Python Backend             | ✅ Implemented         |
+| FastAPI                    | ✅ Implemented         |
+| Amazon Bedrock Integration | ✅ Implemented         |
+| MCP Server                 | ✅ Implemented         |
+| Boto3 AWS Integration      | ✅ Implemented         |
+| AI Tool Calling            | ✅ Implemented (Bedrock Converse)|
+| Chat UI                    | ✅ Implemented         |
+| ChatGPT-like Polished UI   | ✅ Implemented         |
+| Conversation History       | ✅ Implemented (Multi-Session)|
+| User Authentication        | ✅ Implemented (API Key & Login)|
+
+### 2. AWS Services
+
+| AWS Service    | Operation               | Status                |
+| -------------- | ----------------------- | --------------------- |
+| EC2            | List Instances          | ✅ Implemented         |
+| EC2            | Instance Details        | ✅ Implemented         |
+| EC2            | Launch Instance         | ✅ Implemented (Public IP) |
+| EC2            | Stop Instance           | ✅ Implemented         |
+| EC2            | Start Instance          | ✅ Implemented         |
+| EC2            | Reboot Instance         | ✅ Implemented         |
+| EC2            | Terminate Instance      | ✅ Implemented         |
+| VPC            | List VPCs               | ✅ Implemented         |
+| VPC            | Create VPC              | ✅ Implemented         |
+| Subnet         | List Subnets            | ✅ Implemented         |
+| Subnet         | Create Subnet           | ✅ Implemented         |
+| Security Group | List Security Groups    | ✅ Implemented         |
+| Security Group | Inspect Details         | ✅ Implemented         |
+| Security Group | Security Audit          | ✅ Implemented         |
+| Security Group | Create SG               | ✅ Implemented         |
+| Security Group | Add/Remove Rules        | ✅ Implemented         |
+| S3             | List Buckets            | ✅ Implemented         |
+| S3             | Create Bucket           | ✅ Implemented         |
+| S3             | Upload/Download Objects | ✅ Implemented         |
+| RDS            | List/Inspect            | ✅ Implemented         |
+| RDS            | Create/Delete           | ✅ Implemented         |
+| Lambda         | List Functions          | ✅ Implemented         |
+| Lambda         | Create/Update           | ✅ Implemented         |
+| CloudWatch     | List Alarms             | ✅ Implemented         |
+| IAM            | List Roles              | ✅ Implemented         |
+| IAM            | Create/Delete Roles     | ✅ Implemented         |
+
+### 3. AI Capabilities
+
+| Feature                                  | Status               |
+| ---------------------------------------- | -------------------- |
+| Natural Language Prompt                  | ✅ Tested & Verified |
+| AI Identifies Required AWS Tool          | ✅ Tested & Verified |
+| AWS Tool Execution                       | ✅ Tested & Verified |
+| AWS Response to AI                       | ✅ Tested & Verified |
+| Formatted AI Response                    | ✅ Tested & Verified |
+| Multi-step Infrastructure Planning       | ✅ Implemented         |
+| AI-generated Infrastructure Architecture | ✅ Implemented         |
+| Automatic Cost Estimation                | ✅ Implemented         |
+| AI Troubleshooting                       | ✅ Implemented         |
+
+### 4. Security & Production Readiness
+
+| Feature                         | Status                  |
+| ------------------------------- | ----------------------- |
+| IAM Role Integration            | ✅ Implemented           |
+| Least Privilege IAM             | ✅ Configured           |
+| Destructive Action Confirmation | ✅ Implemented           |
+| Audit Logs                      | ✅ Implemented (audit.log)|
+| Budget / Cost Protection        | ✅ Implemented           |
+| API Authentication              | ✅ Implemented (API Key) |
+| Production Deployment Hardening | ✅ Implemented (Headers/CORS)|

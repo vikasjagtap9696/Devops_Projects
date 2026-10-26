@@ -1,0 +1,110 @@
+CLOUDPILOT AI — BUILD AND RUN ON AWS EC2
+
+Follow these steps to get the CloudPilot AI source code from GitHub or your computer, install it on EC2, and open the app in your browser. You do not need to create the application files by hand; they are already in the cloudpilot-ai folder in the repository.
+
+PROJECT SOURCE
+GitHub: https://github.com/devkunaljadhav/cloudpilot-ai-aws-services
+Application folder: cloudpilot-ai
+
+WHAT YOU NEED
+- An AWS account.
+- A Windows computer with PowerShell and the built-in ssh/scp commands.
+- An EC2 SSH key pair (.pem file).
+- An Amazon Bedrock model enabled in ap-south-1.
+
+1. CREATE THE EC2 INSTANCE
+In the AWS Console:
+1. Select region Asia Pacific (Mumbai), ap-south-1.
+2. Open EC2 and choose Launch instance.
+3. Enter a name, for example CloudPilot-AI.
+4. Select Amazon Linux 2023 and an instance type available to your account.
+5. Create or select a key pair, download the .pem file, and keep it private.
+6. Create/select a security group that allows SSH (TCP 22) from My IP only. Do not add an inbound rule for port 8000.
+7. Attach an EC2 IAM role that allows the app to invoke your enabled Bedrock model and perform the AWS actions you want CloudPilot AI to use. For the example request in step 6, the role needs `bedrock:InvokeModel` and `ec2:DescribeInstances`. If you do not have a role, create one in IAM: choose AWS service / EC2 as the trusted entity, add a least-privilege permissions policy for those actions, then select that role here. Add other AWS actions only when you want the app to use them. Do not use AdministratorAccess or put AWS access keys in the project.
+8. Launch the instance and wait until its status checks pass.
+
+In EC2, copy the instance's Public IPv4 address. In the commands below, replace EC2_PUBLIC_IP with that address and C:\path\to\your-key.pem with the full path to your downloaded key. Keep the PowerShell commands on your computer and the Linux commands in the EC2 SSH session as labelled.
+
+2. PUT THE PROJECT SOURCE ON EC2
+Choose ONE method.
+
+OPTION A — GET THE SOURCE FROM GITHUB
+On your computer, open PowerShell and connect to EC2:
+
+    ssh -i "C:\path\to\your-key.pem" ec2-user@EC2_PUBLIC_IP
+
+After you see the EC2 command prompt, run these commands on EC2:
+
+    sudo dnf update -y
+    sudo dnf install -y git python3.11 python3.11-pip
+    git clone https://github.com/devkunaljadhav/cloudpilot-ai-aws-services.git
+    cd ~/cloudpilot-ai-aws-services/cloudpilot-ai
+
+OPTION B — COPY THE SOURCE FROM YOUR COMPUTER
+On your computer, open PowerShell in the repository's root folder (the folder containing the cloudpilot-ai folder). Run:
+
+    ssh -i "C:\path\to\your-key.pem" ec2-user@EC2_PUBLIC_IP "mkdir -p /home/ec2-user/cloudpilot-ai"
+    scp -i "C:\path\to\your-key.pem" -r .\cloudpilot-ai\app .\cloudpilot-ai\static ec2-user@EC2_PUBLIC_IP:/home/ec2-user/cloudpilot-ai/
+    ssh -i "C:\path\to\your-key.pem" ec2-user@EC2_PUBLIC_IP
+
+After you connect, prepare the EC2 instance and enter the app folder:
+
+    sudo dnf update -y
+    sudo dnf install -y python3.11 python3.11-pip
+    cd ~/cloudpilot-ai
+
+3. INSTALL THE APP DEPENDENCIES
+Run these commands in the EC2 SSH session from the app folder. For GitHub, this is `~/cloudpilot-ai-aws-services/cloudpilot-ai`; for the copy option, it is `~/cloudpilot-ai`.
+
+    python3.11 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip
+    pip install fastapi "uvicorn[standard]" boto3 pydantic
+
+4. CONFIGURE AND START CLOUDPILOT AI
+Still in the EC2 session, set the region and Bedrock model, then start the web app:
+
+    export AWS_REGION=ap-south-1
+    export BEDROCK_MODEL_ID=global.amazon.nova-2-lite-v1:0
+    export CLOUDPILOT_USER=admin
+    export CLOUDPILOT_PASS='replace-with-a-strong-password'
+    uvicorn app.web:app --host 127.0.0.1 --port 8000
+
+Replace the example password with your own before running the commands. Keep this terminal open while using the app. If your account uses a different enabled Bedrock model, set BEDROCK_MODEL_ID to that model's ID before starting the app.
+
+5. OPEN THE APP
+On your computer, open a second PowerShell window and create an SSH tunnel:
+
+    ssh -i "C:\path\to\your-key.pem" -L 8000:127.0.0.1:8000 ec2-user@EC2_PUBLIC_IP
+
+Keep the tunnel window open. In your browser, open:
+
+    http://127.0.0.1:8000
+
+Sign in using the username and password you set in step 4. Check the app is responding at http://127.0.0.1:8000/health.
+
+6. TRY IT
+Sign in and send a simple request, for example:
+
+    List my EC2 instances.
+
+The app uses the EC2 IAM role for AWS access. If an AWS action returns AccessDenied, the role needs permission for that action. If a Bedrock request fails, check that model access is enabled in ap-south-1 and that BEDROCK_MODEL_ID matches the model ID in your account.
+
+Port 8000 must stay closed to public traffic; access the app through the SSH tunnel. Stop the app with Ctrl+C in its terminal when finished. EC2 and AWS services may incur charges while in use.
+
+7. EXAMPLE PROMPTS
+Try these prompts in the CloudPilot AI chat:
+
+List my EC2 instances in ap-south-1.
+
+Show my VPCs, subnets, and security groups in ap-south-1.
+
+List my S3 buckets, RDS databases, Lambda functions, and CloudWatch alarms.
+
+Audit security group sg-0123456789abcdef0 in ap-south-1 for risky inbound rules.
+
+Prepare a private S3 bucket named my-unique-cloudpilot-test-bucket in ap-south-1. Show me the preview and wait for my confirmation.
+
+Prepare one EC2 launch using AMI ami-0123456789abcdef0, instance type t3.micro, subnet subnet-0123456789abcdef0, security group sg-0123456789abcdef0, and key pair MyKeyPair. Do not launch it until I review and confirm the preview.
+
+Replace example IDs and names with real values from your AWS account. For create, update, or other write actions, review the preview carefully; the app should wait for your explicit confirmation before making the change. Do not confirm an action unless you intend to make it.
