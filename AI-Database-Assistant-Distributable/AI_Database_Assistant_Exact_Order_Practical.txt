@@ -1,0 +1,2231 @@
+AI DATABASE ASSISTANT
+PRACTICAL IMPLEMENTATION GUIDE
+============================================================
+
+IMPORTANT
+============================================================
+
+Follow this document from STEP 1 to the END.
+
+Do not jump directly to Lambda or API Gateway.
+
+The project was built in this order:
+
+LOCAL AI
+   ↓
+RDS MYSQL
+   ↓
+LAMBDA
+   ↓
+CLOUDFLARE TUNNEL
+   ↓
+API GATEWAY
+   ↓
+FRONTEND
+   ↓
+S3 + CLOUDFRONT (OPTIONAL PUBLIC DEPLOYMENT)
+
+Project architecture:
+
+User Browser
+      |
+      v
+Frontend
+      |
+      v
+API Gateway
+      |
+      v
+AWS Lambda
+      |
+      +---------------------> RDS MySQL
+      |
+      v
+Cloudflare Tunnel
+      |
+      v
+Local FastAPI AI Gateway
+      |
+      v
+Ollama
+      |
+      v
+Qwen3:14b
+
+
+============================================================
+PHASE 1
+LOCAL MACHINE - INSTALL AND PREPARE EVERYTHING
+============================================================
+
+
+STEP 1 - CREATE THE PROJECT FOLDER
+------------------------------------------------------------
+
+1. Open File Explorer.
+
+2. Open:
+
+   C:\
+
+3. Create a folder:
+
+   AI-Database-Assistant
+
+Final path:
+
+   C:\AI-Database-Assistant
+
+
+STEP 2 - INSTALL PYTHON
+------------------------------------------------------------
+
+1. Open:
+
+   https://www.python.org/
+
+2. Download Python for Windows.
+
+3. Start the installer.
+
+4. IMPORTANT:
+   Tick:
+
+   Add Python.exe to PATH
+
+5. Click:
+
+   Install Now
+
+6. After installation, close the installer.
+
+7. Open a NEW PowerShell window.
+
+8. Check Python:
+
+   python --version
+
+9. Check pip:
+
+   pip --version
+
+Python is ready when both commands return a version.
+
+
+STEP 3 - INSTALL OLLAMA
+------------------------------------------------------------
+
+1. Open:
+
+   https://ollama.com/
+
+2. Download Ollama for Windows.
+
+3. Install Ollama.
+
+4. Open a NEW PowerShell.
+
+5. Check:
+
+   ollama --version
+
+If a version is displayed, Ollama is installed.
+
+
+STEP 4 - DOWNLOAD QWEN3:14B
+------------------------------------------------------------
+
+Run:
+
+   ollama pull qwen3:14b
+
+Wait until the complete model download finishes.
+
+Check:
+
+   ollama list
+
+You should see:
+
+   qwen3:14b
+
+
+STEP 5 - TEST QWEN3
+------------------------------------------------------------
+
+Run:
+
+   ollama run qwen3:14b
+
+Ask:
+
+   What is SQL?
+
+If the model answers, local AI is working.
+
+Exit the interactive session after testing.
+
+IMPORTANT:
+
+Do not uninstall or remove Qwen3 after downloading it.
+
+
+STEP 6 - CREATE THE PYTHON VIRTUAL ENVIRONMENT
+------------------------------------------------------------
+
+Open PowerShell.
+
+Run:
+
+   cd C:\AI-Database-Assistant
+
+Create the environment:
+
+   python -m venv venv
+
+This creates:
+
+   C:\AI-Database-Assistant\venv
+
+
+STEP 7 - ACTIVATE THE VIRTUAL ENVIRONMENT
+------------------------------------------------------------
+
+Run:
+
+   .\venv\Scripts\Activate.ps1
+
+You should see:
+
+   (venv)
+
+at the beginning of the PowerShell prompt.
+
+If PowerShell blocks activation, open PowerShell as required by your
+Windows execution-policy configuration and allow local scripts, then
+activate again.
+
+
+STEP 8 - PREPARE THE AI GATEWAY FOLDER
+------------------------------------------------------------
+
+Create/open:
+
+   C:\AI-Database-Assistant\ai-gateway
+
+The folder should contain:
+
+   ai_gateway.py
+   requirements.txt
+
+
+STEP 9 - INSTALL AI GATEWAY DEPENDENCIES
+------------------------------------------------------------
+
+Go to:
+
+   cd C:\AI-Database-Assistant\ai-gateway
+
+Make sure the virtual environment is active.
+
+Run:
+
+   pip install -r requirements.txt
+
+Wait until installation completes.
+
+
+STEP 10 - UNDERSTAND ai_gateway.py
+------------------------------------------------------------
+
+The FastAPI application is the bridge between AWS Lambda and local Ollama.
+
+The basic flow is:
+
+Lambda
+   ↓
+Cloudflare HTTPS URL
+   ↓
+FastAPI
+   ↓
+Ollama
+   ↓
+Qwen3:14b
+   ↓
+Generated SQL
+   ↓
+FastAPI
+   ↓
+Lambda
+
+
+STEP 11 - START FASTAPI
+------------------------------------------------------------
+
+Open PowerShell.
+
+Go to:
+
+   cd C:\AI-Database-Assistant\ai-gateway
+
+Activate venv if necessary:
+
+   ..\venv\Scripts\Activate.ps1
+
+Start FastAPI:
+
+   uvicorn ai_gateway:app --host 127.0.0.1 --port 8000
+
+Keep this PowerShell window OPEN.
+
+Do not press CTRL+C.
+
+FastAPI should now listen on:
+
+   http://127.0.0.1:8000
+
+
+STEP 12 - TEST FASTAPI
+------------------------------------------------------------
+
+Open a browser.
+
+Open:
+
+   http://127.0.0.1:8000/
+
+If the application responds, FastAPI is running.
+
+IMPORTANT:
+
+At this point LOCAL AI is ready:
+
+   Python
+   venv
+   FastAPI
+   Ollama
+   Qwen3:14b
+
+
+============================================================
+PHASE 2
+CREATE AND PREPARE RDS MYSQL
+============================================================
+
+
+STEP 13 - OPEN AWS CONSOLE
+------------------------------------------------------------
+
+Open:
+
+   https://aws.amazon.com/console/
+
+Sign in to your AWS account.
+
+
+STEP 14 - OPEN AMAZON RDS
+------------------------------------------------------------
+
+1. Search for:
+
+   RDS
+
+2. Open:
+
+   Amazon RDS
+
+3. Select your required Region.
+
+The original project used:
+
+   ap-south-1
+   Asia Pacific (Mumbai)
+
+
+STEP 15 - CREATE MYSQL DATABASE
+------------------------------------------------------------
+
+1. Click:
+
+   Create database
+
+2. Choose:
+
+   Standard create
+
+3. Engine:
+
+   MySQL
+
+4. Select a suitable MySQL version.
+
+5. Choose the configuration appropriate for your learning/test account.
+
+Do not select production-sized resources unnecessarily for a practice project.
+
+
+STEP 16 - SET DATABASE IDENTIFICATION
+------------------------------------------------------------
+
+Set a DB instance identifier.
+
+Example:
+
+   ai-database-mysql
+
+
+Set the master username and master password.
+
+IMPORTANT:
+
+Save the master password securely.
+
+Do not put it in GitHub.
+
+
+STEP 17 - SET INITIAL DATABASE NAME
+------------------------------------------------------------
+
+If the RDS creation page asks for an initial database name, use:
+
+   company_db
+
+If you do not create it during RDS setup, create it later from MySQL Workbench.
+
+
+STEP 18 - CONFIGURE RDS CONNECTIVITY
+------------------------------------------------------------
+
+Choose the VPC/network settings required for your project.
+
+Configure the security group carefully.
+
+MySQL uses:
+
+   TCP 3306
+
+Do NOT open:
+
+   0.0.0.0/0
+
+for MySQL unless there is a temporary learning reason and you understand
+the security risk.
+
+Prefer restricted access.
+
+
+STEP 19 - CREATE RDS
+------------------------------------------------------------
+
+Click:
+
+   Create database
+
+Wait.
+
+The database status must become:
+
+   Available
+
+
+STEP 20 - COPY RDS ENDPOINT
+------------------------------------------------------------
+
+Open:
+
+   RDS
+   -> Databases
+   -> Your database
+
+Find:
+
+   Endpoint
+
+Example format:
+
+   ai-database-mysql.xxxxxxxxxxxx.ap-south-1.rds.amazonaws.com
+
+Copy your actual endpoint.
+
+This value becomes:
+
+   DB_HOST
+
+
+STEP 21 - CONNECT TO RDS USING MYSQL WORKBENCH
+------------------------------------------------------------
+
+Open MySQL Workbench.
+
+Create a new connection.
+
+Enter:
+
+   Hostname = RDS endpoint
+   Port = 3306
+   Username = RDS master username
+   Password = RDS master password
+
+Test the connection.
+
+If it connects, RDS networking is working.
+
+
+============================================================
+PHASE 2A
+CREATE DATABASE TABLES
+============================================================
+
+
+STEP 22 - OPEN schema.sql
+------------------------------------------------------------
+
+Open:
+
+   C:\AI-Database-Assistant\database\schema.sql
+
+This file contains the database table creation SQL.
+
+
+STEP 23 - RUN schema.sql
+------------------------------------------------------------
+
+1. Copy the SQL from:
+
+   schema.sql
+
+2. Open MySQL Workbench.
+
+3. Connect to RDS.
+
+4. Paste the SQL.
+
+5. Execute it.
+
+
+STEP 24 - VERIFY DATABASE
+------------------------------------------------------------
+
+Run:
+
+   SHOW DATABASES;
+
+Make sure:
+
+   company_db
+
+exists.
+
+Then:
+
+   USE company_db;
+
+
+STEP 25 - VERIFY TABLES
+------------------------------------------------------------
+
+Run:
+
+   SHOW TABLES;
+
+The project should contain:
+
+   departments
+   employees
+   projects
+   employee_projects
+   salaries
+
+
+STEP 26 - UNDERSTAND departments
+------------------------------------------------------------
+
+The departments table contains:
+
+   id
+   name
+
+The id is the primary key.
+
+
+STEP 27 - UNDERSTAND employees
+------------------------------------------------------------
+
+The employees table contains:
+
+   id
+   name
+   email
+   city
+   salary
+   department_id
+
+department_id connects employees to departments.
+
+
+STEP 28 - UNDERSTAND projects
+------------------------------------------------------------
+
+The projects table contains:
+
+   id
+   name
+   budget
+   department_id
+
+department_id connects projects to departments.
+
+
+STEP 29 - UNDERSTAND employee_projects
+------------------------------------------------------------
+
+This table connects:
+
+   employees
+
+to:
+
+   projects
+
+It contains:
+
+   employee_id
+   project_id
+
+This creates a many-to-many relationship.
+
+
+STEP 30 - UNDERSTAND salaries
+------------------------------------------------------------
+
+The salaries table contains:
+
+   id
+   employee_id
+   salary
+   effective_date
+
+This stores employee salary history.
+
+
+============================================================
+PHASE 2B
+INSERT SAMPLE DATA
+============================================================
+
+
+STEP 31 - OPEN sample-data.sql
+------------------------------------------------------------
+
+Open:
+
+   C:\AI-Database-Assistant\database\sample-data.sql
+
+
+STEP 32 - INSERT SAMPLE DATA
+------------------------------------------------------------
+
+1. Open MySQL Workbench.
+2. Select the RDS connection.
+3. Make sure:
+
+   USE company_db;
+
+4. Copy the contents of:
+
+   sample-data.sql
+
+5. Paste into Workbench.
+6. Execute the script.
+
+
+STEP 33 - VERIFY DEPARTMENTS
+------------------------------------------------------------
+
+Run:
+
+   SELECT * FROM departments;
+
+Check that department records are displayed.
+
+
+STEP 34 - VERIFY EMPLOYEES
+------------------------------------------------------------
+
+Run:
+
+   SELECT * FROM employees;
+
+Check that employee records are displayed.
+
+
+STEP 35 - VERIFY PROJECTS
+------------------------------------------------------------
+
+Run:
+
+   SELECT * FROM projects;
+
+Check that project records are displayed.
+
+
+STEP 36 - VERIFY RELATIONSHIPS
+------------------------------------------------------------
+
+Run:
+
+   SELECT * FROM employee_projects;
+
+Then:
+
+   SELECT * FROM salaries;
+
+The sample data should return records.
+
+
+============================================================
+PHASE 2C
+CREATE READ-ONLY USER
+============================================================
+
+
+STEP 37 - CREATE ai_reader
+------------------------------------------------------------
+
+In MySQL Workbench run:
+
+   CREATE USER 'ai_reader'@'%' IDENTIFIED BY 'YOUR_STRONG_PASSWORD';
+
+
+IMPORTANT:
+
+Replace:
+
+   YOUR_STRONG_PASSWORD
+
+with your own secure password.
+
+Do not upload this password to GitHub.
+
+
+STEP 38 - GIVE USAGE PERMISSION
+------------------------------------------------------------
+
+Run:
+
+   GRANT USAGE ON *.* TO 'ai_reader'@'%';
+
+
+STEP 39 - GIVE SELECT ONLY
+------------------------------------------------------------
+
+Run:
+
+   GRANT SELECT ON company_db.* TO 'ai_reader'@'%';
+
+
+STEP 40 - APPLY PERMISSIONS
+------------------------------------------------------------
+
+Run:
+
+   FLUSH PRIVILEGES;
+
+
+STEP 41 - CHECK PERMISSIONS
+------------------------------------------------------------
+
+Run:
+
+   SHOW GRANTS FOR 'ai_reader'@'%';
+
+You should see SELECT access to:
+
+   company_db.*
+
+
+STEP 42 - TEST ai_reader
+------------------------------------------------------------
+
+Create a new MySQL Workbench connection using:
+
+   Username:
+   ai_reader
+
+   Password:
+   YOUR_STRONG_PASSWORD
+
+Connect.
+
+Run:
+
+   USE company_db;
+
+Then:
+
+   SELECT * FROM employees;
+
+SELECT should work.
+
+Do not give this user write permissions.
+
+
+============================================================
+PHASE 3
+PREPARE AWS LAMBDA
+============================================================
+
+
+STEP 43 - OPEN LAMBDA SOURCE
+------------------------------------------------------------
+
+Open:
+
+   C:\AI-Database-Assistant\lambda\lambda_function.py
+
+This is the Lambda source code.
+
+
+STEP 44 - UNDERSTAND LAMBDA
+------------------------------------------------------------
+
+Lambda performs these tasks:
+
+1. Reads the user's question.
+2. Connects to RDS.
+3. Reads database schema.
+4. Reads foreign-key relationships.
+5. Sends question + schema to FastAPI.
+6. Receives generated SQL.
+7. Validates the SQL.
+8. Allows only SELECT.
+9. Executes the SELECT query.
+10. Returns the results.
+
+
+STEP 45 - PREPARE DEPLOYMENT ZIP
+------------------------------------------------------------
+
+The project already contains the deployment package:
+
+   C:\AI-Database-Assistant\lambda\lambda-deployment.zip
+
+This is the ZIP that is uploaded to AWS Lambda.
+
+IMPORTANT:
+
+Do NOT upload the complete AI-Database-Assistant project ZIP into Lambda.
+
+Upload only:
+
+   lambda-deployment.zip
+
+
+STEP 46 - OPEN AWS LAMBDA
+------------------------------------------------------------
+
+AWS Console:
+
+   Search -> Lambda
+
+Open:
+
+   AWS Lambda
+
+
+STEP 47 - CREATE FUNCTION
+------------------------------------------------------------
+
+Click:
+
+   Create function
+
+Select:
+
+   Author from scratch
+
+Function name:
+
+   ai-database-assistant
+
+Runtime:
+
+   Python
+
+Select a runtime compatible with the deployment package.
+
+Click:
+
+   Create function
+
+
+STEP 48 - UPLOAD LAMBDA ZIP
+------------------------------------------------------------
+
+Open the Lambda function.
+
+In the Code section:
+
+1. Click:
+
+   Upload from
+
+2. Select:
+
+   .zip file
+
+3. Choose:
+
+   C:\AI-Database-Assistant\lambda\lambda-deployment.zip
+
+4. Click:
+
+   Save
+
+Wait until the deployment finishes.
+
+
+STEP 49 - CHECK HANDLER
+------------------------------------------------------------
+
+Go to Lambda runtime settings.
+
+Handler:
+
+   lambda_function.lambda_handler
+
+If it already shows this value, keep it.
+
+
+STEP 50 - CONFIGURE ENVIRONMENT VARIABLES
+------------------------------------------------------------
+
+Go to:
+
+   Configuration
+   -> Environment variables
+
+Click:
+
+   Edit
+
+Add:
+
+   DB_HOST
+   DB_USER
+   DB_PASSWORD
+   DB_NAME
+   DB_PORT
+   AI_GATEWAY_URL
+
+
+STEP 51 - ENTER RDS VALUES
+------------------------------------------------------------
+
+Use:
+
+   DB_HOST = your RDS endpoint
+   DB_USER = ai_reader
+   DB_PASSWORD = your ai_reader password
+   DB_NAME = company_db
+   DB_PORT = 3306
+
+
+Do NOT put the real password in:
+
+   lambda_function.py
+
+Do NOT put it in GitHub.
+
+
+STEP 52 - LEAVE AI_GATEWAY_URL READY
+------------------------------------------------------------
+
+The value will be added after Cloudflare Tunnel is created.
+
+Final format:
+
+   https://YOUR-TUNNEL-HOST/generate-sql
+
+Do not use the example hostname literally.
+
+
+============================================================
+PHASE 3A
+LAMBDA NETWORKING
+============================================================
+
+
+STEP 53 - CONFIGURE LAMBDA VPC
+------------------------------------------------------------
+
+If your RDS is in a VPC that requires Lambda to be inside that VPC:
+
+Lambda:
+
+   Configuration
+   -> VPC
+
+Choose:
+
+   VPC
+   Subnets
+   Security group
+
+according to your RDS network.
+
+
+STEP 54 - CONFIGURE RDS SECURITY GROUP
+------------------------------------------------------------
+
+Open:
+
+   EC2
+   -> Security Groups
+
+Open the security group attached to RDS.
+
+Inbound rule:
+
+   MySQL/Aurora
+   TCP
+   3306
+
+For a VPC-based design, restrict the source to the Lambda security group.
+
+
+STEP 55 - CHECK OUTBOUND ACCESS
+------------------------------------------------------------
+
+Lambda also needs to reach the Cloudflare HTTPS endpoint.
+
+If Lambda is inside private subnets, make sure the network design provides
+the required outbound internet access.
+
+A private subnet does not automatically provide internet access.
+
+
+============================================================
+PHASE 3B
+TEST LAMBDA
+============================================================
+
+
+STEP 56 - CREATE LAMBDA TEST EVENT
+------------------------------------------------------------
+
+Open:
+
+   Lambda
+   -> ai-database-assistant
+   -> Test
+
+Create a test event.
+
+Use:
+
+   {
+     "question": "Show employees from Pune"
+   }
+
+
+STEP 57 - RUN LAMBDA TEST
+------------------------------------------------------------
+
+Click:
+
+   Test
+
+Wait for the result.
+
+
+IMPORTANT:
+
+If AI_GATEWAY_URL is not configured yet, the complete Lambda test will not
+work until the Cloudflare phase is completed.
+
+RDS-only connectivity can be checked through logs or a controlled test,
+but the complete query requires the AI Gateway.
+
+
+============================================================
+PHASE 4
+CLOUDFLARE TUNNEL
+============================================================
+
+
+STEP 58 - INSTALL CLOUDFLARED
+------------------------------------------------------------
+
+Install Cloudflare cloudflared.
+
+Official website:
+
+   https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+After installation open a NEW PowerShell.
+
+Run:
+
+   cloudflared --version
+
+A version should be displayed.
+
+
+STEP 59 - KEEP FASTAPI RUNNING
+------------------------------------------------------------
+
+Go back to the PowerShell where FastAPI is running.
+
+It should still be running:
+
+   uvicorn ai_gateway:app --host 127.0.0.1 --port 8000
+
+Do not close it.
+
+
+STEP 60 - OPEN SECOND POWERSHELL
+------------------------------------------------------------
+
+Open another PowerShell window.
+
+Keep the first FastAPI terminal open.
+
+
+STEP 61 - START QUICK TUNNEL
+------------------------------------------------------------
+
+Run:
+
+   cloudflared tunnel --url http://localhost:8000
+
+
+STEP 62 - COPY CLOUDFLARE HTTPS URL
+------------------------------------------------------------
+
+cloudflared prints a temporary HTTPS URL.
+
+Example format:
+
+   https://something.trycloudflare.com
+
+COPY YOUR ACTUAL URL.
+
+Do not copy the example URL.
+
+
+STEP 63 - TEST TUNNEL
+------------------------------------------------------------
+
+Open the HTTPS URL in a browser.
+
+The request should reach:
+
+   FastAPI
+
+running locally on:
+
+   127.0.0.1:8000
+
+
+STEP 64 - BUILD FINAL AI GATEWAY URL
+------------------------------------------------------------
+
+If your tunnel URL is:
+
+   https://abc.trycloudflare.com
+
+the Lambda endpoint becomes:
+
+   https://abc.trycloudflare.com/generate-sql
+
+The exact hostname will be different for your tunnel.
+
+
+STEP 65 - UPDATE LAMBDA
+------------------------------------------------------------
+
+Go to:
+
+   Lambda
+   -> ai-database-assistant
+   -> Configuration
+   -> Environment variables
+
+Edit:
+
+   AI_GATEWAY_URL
+
+Set:
+
+   https://YOUR-TUNNEL-HOST/generate-sql
+
+Click:
+
+   Save
+
+
+============================================================
+PHASE 4A
+TEST LAMBDA -> CLOUDFLARE -> FASTAPI -> OLLAMA
+============================================================
+
+
+STEP 66 - CHECK LOCAL SERVICES
+------------------------------------------------------------
+
+Before testing Lambda, verify:
+
+1. Ollama is available.
+2. qwen3:14b exists.
+3. FastAPI is running.
+4. cloudflared is running.
+5. The tunnel URL is current.
+
+
+STEP 67 - TEST LAMBDA
+------------------------------------------------------------
+
+Lambda Test Event:
+
+   {
+     "question": "Show employees from Pune"
+   }
+
+Click:
+
+   Test
+
+
+STEP 68 - CHECK SUCCESS
+------------------------------------------------------------
+
+A successful response contains:
+
+   success: true
+
+and:
+
+   question
+   sql
+   row_count
+   results
+
+The SQL should be a SELECT query.
+
+
+STEP 69 - CHECK THE FULL FLOW
+------------------------------------------------------------
+
+The request is now:
+
+Lambda
+   ↓
+Cloudflare Tunnel
+   ↓
+FastAPI
+   ↓
+Ollama
+   ↓
+Qwen3:14b
+   ↓
+SQL
+   ↓
+Lambda
+   ↓
+RDS
+   ↓
+Results
+
+
+============================================================
+PHASE 5
+CREATE API GATEWAY
+============================================================
+
+
+STEP 70 - OPEN API GATEWAY
+------------------------------------------------------------
+
+AWS Console:
+
+   Search -> API Gateway
+
+Open:
+
+   API Gateway
+
+
+STEP 71 - CREATE HTTP API
+------------------------------------------------------------
+
+Click:
+
+   Create API
+
+Choose:
+
+   HTTP API
+
+
+STEP 72 - ADD LAMBDA INTEGRATION
+------------------------------------------------------------
+
+Choose:
+
+   Lambda
+
+Select:
+
+   ai-database-assistant
+
+Continue.
+
+
+STEP 73 - CREATE ROUTE
+------------------------------------------------------------
+
+Create:
+
+   POST /query
+
+Integration:
+
+   ai-database-assistant
+
+
+STEP 74 - CREATE/USE STAGE
+------------------------------------------------------------
+
+Use:
+
+   $default
+
+Auto-deploy can be enabled.
+
+If auto-deploy is enabled, changes are automatically deployed.
+
+
+STEP 75 - CREATE API
+------------------------------------------------------------
+
+Complete the API creation process.
+
+
+STEP 76 - COPY API INVOKE URL
+------------------------------------------------------------
+
+Open the API details.
+
+Copy the Invoke URL.
+
+Example:
+
+   https://15qn46073k.execute-api.ap-south-1.amazonaws.com
+
+Your API ID will be different.
+
+Final route:
+
+   https://YOUR_API_ID.execute-api.ap-south-1.amazonaws.com/query
+
+
+============================================================
+PHASE 5A
+CONFIGURE CORS
+============================================================
+
+
+STEP 77 - OPEN CORS
+------------------------------------------------------------
+
+API Gateway:
+
+   Your HTTP API
+   -> CORS
+
+Configure for development:
+
+   Allow origins:
+   *
+
+   Allow methods:
+   POST
+
+   Allow headers:
+   content-type
+
+   Credentials:
+   No
+
+
+STEP 78 - SAVE CORS
+------------------------------------------------------------
+
+Click:
+
+   Save
+
+If $default auto-deploy is enabled, allow the change to deploy automatically.
+
+
+============================================================
+PHASE 5B
+TEST API GATEWAY
+============================================================
+
+
+STEP 79 - OPEN POWERSHELL
+------------------------------------------------------------
+
+Create request body:
+
+   $body = @{
+       question = "Show employees from Pune"
+   } | ConvertTo-Json
+
+
+STEP 80 - CALL API
+------------------------------------------------------------
+
+Run:
+
+   Invoke-RestMethod `
+       -Uri "https://YOUR_API_ID.execute-api.ap-south-1.amazonaws.com/query" `
+       -Method POST `
+       -ContentType "application/json" `
+       -Body $body
+
+Replace:
+
+   YOUR_API_ID
+
+with your actual API ID.
+
+
+STEP 81 - CHECK API RESPONSE
+------------------------------------------------------------
+
+Expected response includes:
+
+   success
+   question
+   sql
+   row_count
+   results
+
+If this works, the following path is working:
+
+API Gateway
+   ↓
+Lambda
+   ↓
+Cloudflare
+   ↓
+FastAPI
+   ↓
+Ollama
+   ↓
+Qwen3
+   ↓
+Lambda
+   ↓
+RDS
+
+
+============================================================
+PHASE 6
+CONNECT THE FRONTEND
+============================================================
+
+
+STEP 82 - OPEN FRONTEND
+------------------------------------------------------------
+
+Open:
+
+   C:\AI-Database-Assistant\frontend\index.html
+
+
+STEP 83 - FIND API URL
+------------------------------------------------------------
+
+In VS Code:
+
+   CTRL + F
+
+Search:
+
+   execute-api
+
+Find the API endpoint.
+
+Example:
+
+   https://YOUR_API_ID.execute-api.ap-south-1.amazonaws.com/query
+
+
+STEP 84 - PUT YOUR API URL
+------------------------------------------------------------
+
+Replace the placeholder with your actual API Gateway endpoint:
+
+   https://YOUR_API_ID.execute-api.ap-south-1.amazonaws.com/query
+
+Save:
+
+   CTRL + S
+
+
+STEP 85 - INSTALL LIVE SERVER
+------------------------------------------------------------
+
+Open VS Code.
+
+Click:
+
+   Extensions
+
+Search:
+
+   Live Server
+
+Install the extension.
+
+
+STEP 86 - START FRONTEND
+------------------------------------------------------------
+
+Open:
+
+   frontend/index.html
+
+Right-click.
+
+Select:
+
+   Open with Live Server
+
+
+STEP 87 - OPEN BROWSER
+------------------------------------------------------------
+
+The browser should open a URL similar to:
+
+   http://localhost:5500
+
+IMPORTANT:
+
+Do not use:
+
+   file:///
+
+for this API test.
+
+Live Server gives the page a normal HTTP origin.
+
+
+============================================================
+PHASE 6A
+RUN REAL QUERIES
+============================================================
+
+
+STEP 88 - TEST PUNE QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employees from Pune
+
+Click the query button.
+
+Expected:
+
+   Generated SQL
+
+and:
+
+   Result table
+
+
+STEP 89 - TEST CLOUD DEPARTMENT
+------------------------------------------------------------
+
+Enter:
+
+   Show employees working in the Cloud department
+
+Submit.
+
+Expected:
+
+The AI generates a SELECT query using the employees and departments relationship.
+
+Results should appear in the frontend.
+
+
+STEP 90 - TEST SALARY QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employees with salary greater than 60000
+
+Submit.
+
+Check SQL and results.
+
+
+STEP 91 - TEST PROJECT QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employees working on AWS Cloud Migration
+
+Submit.
+
+The generated SQL can use:
+
+   employees
+   employee_projects
+   projects
+
+Check the result.
+
+
+STEP 92 - TEST CITY QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employee names and salaries from Mumbai
+
+Submit.
+
+Check the returned records.
+
+
+============================================================
+PHASE 6B
+UNDERSTAND THE COMPLETE REQUEST
+============================================================
+
+
+STEP 93 - USER ENTERS QUESTION
+------------------------------------------------------------
+
+Example:
+
+   Show employees working in the Cloud department
+
+
+STEP 94 - FRONTEND SENDS REQUEST
+------------------------------------------------------------
+
+Frontend sends:
+
+   POST /query
+
+Body:
+
+   {
+      "question": "Show employees working in the Cloud department"
+   }
+
+
+STEP 95 - API GATEWAY RECEIVES REQUEST
+------------------------------------------------------------
+
+API Gateway route:
+
+   POST /query
+
+passes the request to:
+
+   ai-database-assistant
+
+
+STEP 96 - LAMBDA CONNECTS TO RDS
+------------------------------------------------------------
+
+Lambda connects using:
+
+   ai_reader
+
+Lambda reads the database schema.
+
+
+STEP 97 - LAMBDA DISCOVERS SCHEMA
+------------------------------------------------------------
+
+Lambda reads:
+
+   information_schema.COLUMNS
+
+and:
+
+   information_schema.KEY_COLUMN_USAGE
+
+This identifies:
+
+   tables
+   columns
+   primary keys
+   foreign keys
+
+
+STEP 98 - LAMBDA SENDS QUESTION TO AI GATEWAY
+------------------------------------------------------------
+
+Lambda sends:
+
+   question
+   db_schema
+
+to:
+
+   AI_GATEWAY_URL
+
+
+STEP 99 - CLOUDFLARE FORWARDS REQUEST
+------------------------------------------------------------
+
+Cloudflare forwards the HTTPS request to:
+
+   http://127.0.0.1:8000
+
+
+STEP 100 - FASTAPI CALLS OLLAMA
+------------------------------------------------------------
+
+FastAPI sends the prompt to the local Ollama API.
+
+Ollama endpoint:
+
+   http://127.0.0.1:11434/api/generate
+
+
+STEP 101 - QWEN3 GENERATES SQL
+------------------------------------------------------------
+
+Qwen3:14b receives:
+
+   user question
+   database schema
+
+and generates SQL.
+
+
+STEP 102 - LAMBDA VALIDATES SQL
+------------------------------------------------------------
+
+Lambda uses SQL parsing/validation.
+
+Only:
+
+   SELECT
+
+is allowed.
+
+Blocked operations include:
+
+   INSERT
+   UPDATE
+   DELETE
+   DROP
+   ALTER
+   TRUNCATE
+   CREATE
+   REPLACE
+   GRANT
+   REVOKE
+
+
+STEP 103 - LAMBDA EXECUTES SQL
+------------------------------------------------------------
+
+Only after validation, Lambda executes the query against RDS.
+
+
+STEP 104 - RESULTS RETURN
+------------------------------------------------------------
+
+RDS:
+
+   results
+
+return to:
+
+   Lambda
+
+then:
+
+   API Gateway
+
+then:
+
+   Frontend
+
+
+STEP 105 - FRONTEND DISPLAYS RESULTS
+------------------------------------------------------------
+
+The frontend displays:
+
+   Question
+   Generated SQL
+   Result count
+   Result table
+
+
+============================================================
+PHASE 7
+CLOUDWATCH MONITORING
+============================================================
+
+
+STEP 106 - OPEN CLOUDWATCH
+------------------------------------------------------------
+
+AWS Console:
+
+   Search -> CloudWatch
+
+Lambda logs can be accessed from:
+
+   Lambda
+   -> ai-database-assistant
+   -> Monitor
+   -> View CloudWatch logs
+
+
+STEP 107 - OPEN LATEST LOG STREAM
+------------------------------------------------------------
+
+Open the latest log stream.
+
+Check errors related to:
+
+   RDS
+   Python imports
+   AI Gateway
+   Timeout
+   SQL validation
+
+
+STEP 108 - DO NOT LOG SECRETS
+------------------------------------------------------------
+
+Never print:
+
+   DB_PASSWORD
+   AWS secret keys
+   Cloudflare tokens
+
+into logs.
+
+
+============================================================
+PHASE 8
+OPTIONAL PUBLIC FRONTEND
+S3 + CLOUDFRONT
+============================================================
+
+Do this only after the complete localhost project works.
+
+
+STEP 109 - OPEN S3
+------------------------------------------------------------
+
+AWS Console:
+
+   Search -> S3
+
+Click:
+
+   Create bucket
+
+
+STEP 110 - CREATE BUCKET
+------------------------------------------------------------
+
+Choose a globally unique bucket name.
+
+Select:
+
+   ap-south-1
+
+or your required region.
+
+For CloudFront OAC:
+
+   Keep Block Public Access enabled.
+
+Do not make the bucket publicly accessible just for convenience.
+
+
+STEP 111 - UPLOAD FRONTEND
+------------------------------------------------------------
+
+Open the S3 bucket.
+
+Click:
+
+   Upload
+
+Upload the frontend files.
+
+At minimum:
+
+   index.html
+
+Also upload required CSS, JS, and assets if your frontend has them.
+
+
+STEP 112 - OPEN CLOUDFRONT
+------------------------------------------------------------
+
+AWS Console:
+
+   Search -> CloudFront
+
+Click:
+
+   Create distribution
+
+
+STEP 113 - SELECT S3 ORIGIN
+------------------------------------------------------------
+
+Select the S3 bucket as the origin.
+
+Use:
+
+   Origin Access Control (OAC)
+
+Keep the S3 bucket private.
+
+
+STEP 114 - SET DEFAULT ROOT OBJECT
+------------------------------------------------------------
+
+Set:
+
+   index.html
+
+
+STEP 115 - CREATE DISTRIBUTION
+------------------------------------------------------------
+
+Create the CloudFront distribution.
+
+Wait for the deployment status to become ready.
+
+
+STEP 116 - OPEN CLOUDFRONT URL
+------------------------------------------------------------
+
+Copy the CloudFront distribution domain.
+
+Open it in a browser.
+
+The frontend should load through HTTPS.
+
+
+STEP 117 - UPDATE API GATEWAY CORS
+------------------------------------------------------------
+
+Once the public frontend URL works, update API Gateway CORS to use the actual
+frontend origin where appropriate.
+
+For development:
+
+   *
+
+can be used.
+
+For a production setup:
+
+   allow only the required frontend origin.
+
+
+============================================================
+PHASE 9
+OPTIONAL PERMANENT CLOUDFLARE TUNNEL
+============================================================
+
+
+STEP 118 - UNDERSTAND QUICK TUNNEL
+------------------------------------------------------------
+
+The command:
+
+   cloudflared tunnel --url http://localhost:8000
+
+creates a temporary Quick Tunnel.
+
+Its URL can change.
+
+If the URL changes, update:
+
+   Lambda
+   -> Environment variables
+   -> AI_GATEWAY_URL
+
+
+STEP 119 - CREATE NAMED TUNNEL
+------------------------------------------------------------
+
+For a permanent setup, create a named Cloudflare Tunnel using Cloudflare's
+official documentation.
+
+Official documentation:
+
+   https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+
+
+STEP 120 - CREATE STABLE HOSTNAME
+------------------------------------------------------------
+
+Configure a hostname that forwards to:
+
+   http://127.0.0.1:8000
+
+Use your own domain if required.
+
+
+STEP 121 - UPDATE LAMBDA
+------------------------------------------------------------
+
+Set:
+
+   AI_GATEWAY_URL
+
+to:
+
+   https://YOUR-STABLE-HOSTNAME/generate-sql
+
+
+============================================================
+FINAL PRACTICAL TEST
+============================================================
+
+
+STEP 122 - START OLLAMA
+------------------------------------------------------------
+
+Check:
+
+   ollama list
+
+Confirm:
+
+   qwen3:14b
+
+
+STEP 123 - START FASTAPI
+------------------------------------------------------------
+
+Terminal 1:
+
+   cd C:\AI-Database-Assistant\ai-gateway
+
+   ..\venv\Scripts\Activate.ps1
+
+   uvicorn ai_gateway:app --host 127.0.0.1 --port 8000
+
+
+STEP 124 - START CLOUDFLARE
+------------------------------------------------------------
+
+Terminal 2:
+
+   cloudflared tunnel --url http://localhost:8000
+
+
+STEP 125 - CHECK LAMBDA
+------------------------------------------------------------
+
+Confirm:
+
+   DB_HOST
+   DB_USER
+   DB_PASSWORD
+   DB_NAME
+   DB_PORT
+   AI_GATEWAY_URL
+
+
+STEP 126 - CHECK API
+------------------------------------------------------------
+
+Confirm:
+
+   POST /query
+
+exists.
+
+
+STEP 127 - OPEN FRONTEND
+------------------------------------------------------------
+
+Use:
+
+   Open with Live Server
+
+
+STEP 128 - RUN FINAL QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employees working in the Cloud department
+
+
+STEP 129 - VERIFY SQL
+------------------------------------------------------------
+
+The frontend should show generated SELECT SQL.
+
+
+STEP 130 - VERIFY DATABASE RESULTS
+------------------------------------------------------------
+
+The frontend should display the matching RDS MySQL rows.
+
+
+STEP 131 - RUN SECOND QUERY
+------------------------------------------------------------
+
+Enter:
+
+   Show employees working on AWS Cloud Migration
+
+
+Verify:
+
+   SQL
+   Result count
+   Results table
+
+
+============================================================
+FINAL CHECKLIST
+============================================================
+
+LOCAL:
+
+[ ] Python installed
+[ ] Ollama installed
+[ ] qwen3:14b downloaded
+[ ] Ollama tested
+[ ] Project folder created
+[ ] venv created
+[ ] venv activated
+[ ] FastAPI dependencies installed
+[ ] ai_gateway.py ready
+[ ] FastAPI running
+
+RDS:
+
+[ ] RDS MySQL created
+[ ] RDS status Available
+[ ] RDS endpoint copied
+[ ] Security group configured
+[ ] company_db created
+[ ] departments created
+[ ] employees created
+[ ] projects created
+[ ] employee_projects created
+[ ] salaries created
+[ ] sample data inserted
+[ ] ai_reader created
+[ ] SELECT permission granted
+[ ] ai_reader tested
+
+LAMBDA:
+
+[ ] Lambda function created
+[ ] lambda-deployment.zip uploaded
+[ ] Handler configured
+[ ] DB_HOST configured
+[ ] DB_USER configured
+[ ] DB_PASSWORD configured
+[ ] DB_NAME configured
+[ ] DB_PORT configured
+[ ] Lambda networking configured
+[ ] Lambda can access RDS
+
+CLOUDFLARE:
+
+[ ] cloudflared installed
+[ ] FastAPI running
+[ ] Quick Tunnel started
+[ ] HTTPS URL copied
+[ ] AI_GATEWAY_URL configured
+[ ] Lambda -> AI Gateway tested
+
+API GATEWAY:
+
+[ ] HTTP API created
+[ ] Lambda integration configured
+[ ] POST /query created
+[ ] $default stage configured
+[ ] CORS configured
+[ ] API URL copied
+[ ] PowerShell API test successful
+
+FRONTEND:
+
+[ ] index.html opened
+[ ] API Gateway URL configured
+[ ] Live Server installed
+[ ] Frontend opened on localhost
+[ ] Pune query tested
+[ ] Cloud department query tested
+[ ] Salary query tested
+[ ] AWS Cloud Migration query tested
+[ ] SQL displayed
+[ ] Results displayed
+
+PUBLIC DEPLOYMENT:
+
+[ ] S3 bucket created
+[ ] Frontend uploaded
+[ ] CloudFront created
+[ ] OAC configured
+[ ] index.html set as root object
+[ ] CloudFront URL tested
+[ ] API Gateway CORS updated
+
+
+============================================================
+IMPORTANT SECURITY RULES
+============================================================
+
+NEVER upload these to GitHub:
+
+   AWS access keys
+   AWS secret keys
+   AWS session tokens
+   RDS passwords
+   ai_reader real password
+   Cloudflare API tokens
+   SSH private keys
+   Real .env files
+
+Use:
+
+   .env.example
+
+for example configuration.
+
+Use a read-only database account for the AI application.
+
+The Lambda validation should continue to allow only SELECT queries.
+
+============================================================
+END OF PRACTICAL
+============================================================

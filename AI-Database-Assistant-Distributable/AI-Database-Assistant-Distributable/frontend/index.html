@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Database Assistant</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(circle at top left, #1e293b, transparent 35%),
+                radial-gradient(circle at bottom right, #312e81, transparent 35%),
+                #020617;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(20px);
+        }
+
+        .header {
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
+        }
+
+        .title h1 {
+            font-size: 21px;
+            margin-bottom: 5px;
+        }
+
+        .title p {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 12px #22c55e;
+        }
+
+        .chat {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .welcome {
+            text-align: center;
+            margin: 55px auto 35px;
+            max-width: 700px;
+        }
+
+        .welcome h2 {
+            font-size: 34px;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #ffffff, #93c5fd, #67e8f9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome p {
+            color: #94a3b8;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .examples {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        .example {
+            text-align: left;
+            padding: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            background: rgba(30, 41, 59, 0.55);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: 0.25s ease;
+        }
+
+        .example:hover {
+            transform: translateY(-2px);
+            border-color: rgba(96, 165, 250, 0.45);
+            background: rgba(30, 41, 59, 0.85);
+        }
+
+        .example strong {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+        }
+
+        .example span {
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .message {
+            max-width: 850px;
+            margin: 0 auto 18px;
+            padding: 18px 20px;
+            border-radius: 18px;
+            line-height: 1.6;
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #3730a3, #1d4ed8);
+            margin-left: auto;
+            width: fit-content;
+            max-width: 80%;
+        }
+
+        .assistant-message {
+            background: rgba(30, 41, 59, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .message-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .sql-box {
+            margin-top: 14px;
+            background: #020617;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+
+        .sql-header {
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #94a3b8;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        pre {
+            padding: 15px;
+            color: #a5f3fc;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .table-wrapper {
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+
+        th,
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            color: #cbd5e1;
+            background: rgba(51, 65, 85, 0.45);
+        }
+
+        td {
+            color: #e2e8f0;
+        }
+
+        .composer {
+            padding: 20px 24px 24px;
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+            background: rgba(2, 6, 23, 0.55);
+        }
+
+        .input-area {
+            max-width: 950px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        textarea {
+            flex: 1;
+            resize: none;
+            min-height: 54px;
+            max-height: 150px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 15px;
+        }
+
+        textarea::placeholder {
+            color: #64748b;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .send-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            font-size: 20px;
+            transition: 0.2s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.04);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+        }
+
+        .loader {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #38bdf8;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                opacity: 0.3;
+                transform: scale(0.7);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                min-height: 95vh;
+                border-radius: 18px;
+            }
+
+            .header {
+                padding: 18px;
+            }
+
+            .status {
+                display: none;
+            }
+
+            .chat {
+                padding: 18px;
+            }
+
+            .welcome {
+                margin-top: 30px;
+            }
+
+            .welcome h2 {
+                font-size: 26px;
+            }
+
+            .examples {
+                grid-template-columns: 1fr;
+            }
+
+            .composer {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="header">
+
+        <div class="brand">
+
+            <div class="logo">
+                🤖
+            </div>
+
+            <div class="title">
+                <h1>AI Database Assistant</h1>
+                <p>Ask your database questions in normal language</p>
+            </div>
+
+        </div>
+
+        <div class="status">
+            <span class="status-dot"></span>
+            AI Online
+        </div>
+
+    </header>
+
+
+    <main class="chat" id="chat">
+
+        <section class="welcome" id="welcome">
+
+            <h2>Ask Your Database Anything</h2>
+
+            <p>
+                Type a question in natural language.
+                The AI will understand your question,
+                generate a safe SQL query and return the database results.
+            </p>
+
+        </section>
+
+
+        <section class="examples" id="examples">
+
+            <div class="example"
+                 onclick="useExample('Show employees from Pune')">
+
+                <strong>👥 Employees</strong>
+
+                <span>
+                    Show employees from Pune
+                </span>
+
+            </div>
+
+
+            <div class="example"
+                 onclick="useExample('Which employees are working on AWS Cloud Migration?')">
+
+                <strong>☁️ Projects</strong>
+
+                <span>
+                    Which employees are working on AWS Cloud Migration?
+                </span>
+
+            </div>
+
+
+            <div class="example"
+                 onclick="useExample('Which department has the highest average salary?')">
+
+                <strong>💰 Salary Analysis</strong>
+
+                <span>
+                    Which department has the highest average salary?
+                </span>
+
+            </div>
+
+
+            <div class="example"
+                 onclick="useExample('Show employees working in the Cloud department')">
+
+                <strong>🏢 Departments</strong>
+
+                <span>
+                    Show employees working in the Cloud department
+                </span>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer class="composer">
+
+        <div class="input-area">
+
+            <textarea
+                id="question"
+                placeholder="Ask something like: Show employees from Pune..."
+                rows="1"
+                onkeydown="handleKey(event)"
+            ></textarea>
+
+            <button
+                class="send-btn"
+                id="sendButton"
+                onclick="askDatabase()"
+                title="Ask database"
+            >
+                ➤
+            </button>
+
+        </div>
+
+        <div class="footer">
+            AI Database Assistant • AWS Lambda • RDS MySQL • Qwen3
+        </div>
+
+    </footer>
+
+</div>
+
+
+<script>
+
+    const API_URL =
+        "https://YOUR_API_ID.execute-api.ap-south-1.amazonaws.com/query";
+
+
+    const chat = document.getElementById("chat");
+    const questionInput = document.getElementById("question");
+    const sendButton = document.getElementById("sendButton");
+
+
+    function handleKey(event) {
+
+        if (event.key === "Enter" && !event.shiftKey) {
+
+            event.preventDefault();
+
+            askDatabase();
+        }
+    }
+
+
+    function useExample(text) {
+
+        questionInput.value = text;
+
+        questionInput.focus();
+    }
+
+
+    function addMessage(html, type) {
+
+        const message = document.createElement("div");
+
+        message.className =
+            "message " +
+            (type === "user"
+                ? "user-message"
+                : "assistant-message");
+
+        message.innerHTML = html;
+
+        chat.appendChild(message);
+
+        chat.scrollTop = chat.scrollHeight;
+
+        return message;
+    }
+
+
+    function showLoading() {
+
+        return addMessage(`
+            <div class="message-label">AI Assistant</div>
+
+            <div class="loading">
+                <span class="loader"></span>
+                Thinking and querying database...
+            </div>
+        `, "assistant");
+    }
+
+
+    function createResultsTable(results) {
+
+        if (!results || results.length === 0) {
+
+            return `
+                <p style="margin-top:15px;color:#94a3b8;">
+                    No records found.
+                </p>
+            `;
+        }
+
+
+        const columns = Object.keys(results[0]);
+
+
+        let html = `
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+        `;
+
+
+        for (const column of columns) {
+
+            html += `
+                <th>${escapeHtml(column)}</th>
+            `;
+        }
+
+
+        html += `
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+
+        for (const row of results) {
+
+            html += "<tr>";
+
+
+            for (const column of columns) {
+
+                html += `
+                    <td>${escapeHtml(row[column])}</td>
+                `;
+            }
+
+
+            html += "</tr>";
+        }
+
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+
+        return html;
+    }
+
+
+    function escapeHtml(value) {
+
+        if (value === null || value === undefined) {
+
+            return "";
+        }
+
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+
+    async function askDatabase() {
+
+        const question =
+            questionInput.value.trim();
+
+
+        if (!question) {
+
+            questionInput.focus();
+
+            return;
+        }
+
+
+        document.getElementById("welcome")?.remove();
+
+        document.getElementById("examples")?.remove();
+
+
+        addMessage(`
+            <div class="message-label">You</div>
+            ${escapeHtml(question)}
+        `, "user");
+
+
+        questionInput.value = "";
+
+        sendButton.disabled = true;
+
+
+        const loadingMessage = showLoading();
+
+
+        try {
+
+            const response = await fetch(
+                API_URL,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        question: question
+                    })
+                }
+            );
+
+
+            const data = await response.json();
+
+
+            loadingMessage.remove();
+
+
+            if (!response.ok || data.success === false) {
+
+                throw new Error(
+                    data.error ||
+                    "Unable to process your request"
+                );
+            }
+
+
+            let html = `
+                <div class="message-label">
+                    AI Assistant
+                </div>
+
+                <p>
+                    Found
+                    <strong>${data.row_count}</strong>
+                    result(s).
+                </p>
+
+                <div class="sql-box">
+
+                    <div class="sql-header">
+                        Generated SQL
+                    </div>
+
+                    <pre>${escapeHtml(data.sql)}</pre>
+
+                </div>
+
+                ${createResultsTable(data.results)}
+            `;
+
+
+            addMessage(html, "assistant");
+
+
+        } catch (error) {
+
+            loadingMessage.remove();
+
+
+            addMessage(`
+                <div class="message-label">
+                    Error
+                </div>
+
+                <p style="color:#fca5a5;">
+                    ${escapeHtml(error.message)}
+                </p>
+            `, "assistant");
+
+        } finally {
+
+            sendButton.disabled = false;
+
+            questionInput.focus();
+        }
+    }
+
+</script>
+
+</body>
+</html>
