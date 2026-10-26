@@ -1,0 +1,1205 @@
+============================================================
+HEART DISEASE MLOps – ADVANCED CI/CD
+PRACTICAL STEP-BY-STEP PROCESS
+============================================================
+
+PROJECT REPOSITORY:
+
+https://github.com/vikasjagtap9696/heart-disease-prediction-mlops
+
+AWS REGION:
+
+ap-south-1
+
+
+============================================================
+STEP 1 — EC2 LAUNCH
+============================================================
+
+AWS Console
+→ EC2
+→ Launch Instance
+
+Name:
+
+heart-disease-mlops
+
+AMI:
+
+Amazon Linux 2023
+
+Architecture:
+
+64-bit x86
+
+Security Group:
+
+SSH       → 22    → My IP
+FastAPI   → 8000  → My IP
+MLflow    → 5000  → My IP
+
+Launch Instance.
+
+
+============================================================
+STEP 2 — CONNECT TO EC2
+============================================================
+
+Windows PowerShell:
+
+ssh -i "your-key.pem" ec2-user@<EC2_PUBLIC_IP>
+
+
+============================================================
+STEP 3 — UPDATE SYSTEM
+============================================================
+
+sudo dnf update -y
+
+
+============================================================
+STEP 4 — INSTALL GIT
+============================================================
+
+sudo dnf install git -y
+
+git --version
+
+
+============================================================
+STEP 5 — INSTALL DOCKER
+============================================================
+
+sudo dnf install docker -y
+
+sudo systemctl start docker
+
+sudo systemctl enable docker
+
+sudo usermod -aG docker ec2-user
+
+
+Logout:
+
+exit
+
+
+Connect again:
+
+ssh -i "your-key.pem" ec2-user@<EC2_PUBLIC_IP>
+
+
+Test:
+
+docker ps
+
+
+============================================================
+STEP 6 — INSTALL DOCKER COMPOSE
+============================================================
+
+sudo curl -L \
+"https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
+-o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+docker-compose --version
+
+
+============================================================
+STEP 7 — CHECK BUILDX
+============================================================
+
+docker buildx version
+
+
+If Buildx is older than required:
+
+sudo rm -f /usr/libexec/docker/cli-plugins/docker-buildx
+
+cd /tmp
+
+sudo curl -fL \
+https://github.com/docker/buildx/releases/download/v0.37.1/buildx-v0.37.1.linux-amd64 \
+-o docker-buildx
+
+sudo mkdir -p /usr/libexec/docker/cli-plugins
+
+sudo mv docker-buildx \
+/usr/libexec/docker/cli-plugins/docker-buildx
+
+sudo chmod +x \
+/usr/libexec/docker/cli-plugins/docker-buildx
+
+docker buildx version
+
+
+============================================================
+STEP 8 — CLONE PROJECT
+============================================================
+
+cd /home/ec2-user
+
+git clone \
+https://github.com/vikasjagtap9696/heart-disease-prediction-mlops.git
+
+cd /home/ec2-user/heart-disease-prediction-mlops
+
+pwd
+
+ls
+
+
+============================================================
+STEP 9 — TEST PROJECT ON EC2
+============================================================
+
+Build:
+
+docker-compose -f Docker-compose.yaml build
+
+
+Run:
+
+docker-compose -f Docker-compose.yaml up -d
+
+
+Check:
+
+docker-compose -f Docker-compose.yaml ps
+
+
+Test:
+
+curl http://localhost:8000/health
+
+
+Expected:
+
+{"healthy":"true"}
+
+
+Test root:
+
+curl http://localhost:8000/
+
+
+Expected:
+
+{"message":"FastAPI server is up."}
+
+
+============================================================
+STEP 10 — CREATE ECR
+============================================================
+
+AWS Console:
+
+ECR
+→ Repositories
+→ Create repository
+
+Repository name:
+
+heart-disease-prediction-mlops
+
+Select:
+
+Private
+
+Create repository.
+
+
+IMPORTANT:
+
+Do NOT hardcode the complete ECR URI in the CI/CD workflow.
+
+GitHub Actions will automatically get the ECR registry URI.
+
+
+============================================================
+STEP 11 — CREATE IAM ROLE
+============================================================
+
+AWS Console:
+
+IAM
+→ Roles
+→ Create role
+
+Select:
+
+AWS service
+
+Select:
+
+EC2
+
+Next.
+
+Search permission:
+
+AmazonEC2ContainerRegistryPowerUser
+
+Select it.
+
+Role name:
+
+MLOpsEC2ECRRole
+
+Create role.
+
+
+IMPORTANT:
+
+Do NOT create long-lived AWS Access Keys for this project.
+
+The EC2 IAM Role is used for AWS authentication.
+
+
+============================================================
+STEP 12 — ATTACH IAM ROLE TO EC2
+============================================================
+
+AWS Console:
+
+EC2
+→ Instances
+→ Select your EC2
+
+Actions
+→ Security
+→ Modify IAM role
+
+Select:
+
+MLOpsEC2ECRRole
+
+Save.
+
+
+============================================================
+STEP 13 — VERIFY IAM ROLE
+============================================================
+
+On EC2:
+
+aws sts get-caller-identity
+
+
+If account/identity information is returned,
+IAM Role is working.
+
+
+============================================================
+STEP 14 — INSTALL AWS CLI IF REQUIRED
+============================================================
+
+Check:
+
+aws --version
+
+
+If AWS CLI is missing:
+
+sudo dnf install awscli -y
+
+aws --version
+
+
+============================================================
+STEP 15 — CREATE GITHUB RUNNER USER
+============================================================
+
+Create runner user:
+
+sudo useradd -m githubrunner
+
+
+IMPORTANT:
+
+If this error appears:
+
+user 'githubrunner' already exists
+
+Do NOT run useradd again.
+
+Continue with:
+
+sudo usermod -aG docker githubrunner
+
+
+Create runner directory:
+
+sudo mkdir -p \
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Give runner ownership:
+
+sudo chown -R githubrunner:githubrunner \
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Runner directory:
+
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+============================================================
+STEP 16 — GITHUB SELF-HOSTED RUNNER
+============================================================
+
+The EC2 instance will be used as a GitHub Actions
+self-hosted runner.
+
+GitHub:
+
+Repository
+→ Settings
+→ Actions
+→ Runners
+→ New self-hosted runner
+
+Select:
+
+Linux
+x64
+
+
+============================================================
+STEP 17 — RUNNER DIRECTORY PERMISSION
+============================================================
+
+The githubrunner user must be able to access every directory
+in the runner path.
+
+Switch to root:
+
+sudo -i
+
+
+Give traverse permission to /home/ec2-user:
+
+chmod 711 /home/ec2-user
+
+
+Set project directory permission:
+
+chmod 755 \
+/home/ec2-user/heart-disease-prediction-mlops
+
+
+Set runner directory permission:
+
+chmod 755 \
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Set runner ownership:
+
+chown -R githubrunner:githubrunner \
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Check:
+
+ls -ld /home/ec2-user
+
+ls -ld /home/ec2-user/heart-disease-prediction-mlops
+
+ls -ld /home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+IMPORTANT:
+
+Run chmod and chown as root.
+
+
+============================================================
+STEP 18 — INSTALL RUNNER DEPENDENCIES
+============================================================
+
+Install checksum utility:
+
+sudo dnf install perl-Digest-SHA -y
+
+
+Install ICU dependencies:
+
+sudo dnf install libicu libicu-devel -y
+
+
+Verify ICU:
+
+rpm -qa | grep -i icu
+
+
+============================================================
+STEP 19 — DOWNLOAD GITHUB ACTIONS RUNNER
+============================================================
+
+Switch to githubrunner:
+
+su - githubrunner
+
+
+Go to runner directory:
+
+cd /home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Download runner:
+
+curl -o actions-runner-linux-x64-2.337.0.tar.gz -L \
+https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz
+
+
+Verify checksum:
+
+echo "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613  actions-runner-linux-x64-2.337.0.tar.gz" | shasum -a 256 -c
+
+
+Expected:
+
+actions-runner-linux-x64-2.337.0.tar.gz: OK
+
+
+Extract:
+
+tar xzf ./actions-runner-linux-x64-2.337.0.tar.gz
+
+
+============================================================
+STEP 20 — CONFIGURE GITHUB RUNNER
+============================================================
+
+Check current user:
+
+whoami
+
+
+Expected:
+
+githubrunner
+
+
+Check directory:
+
+pwd
+
+
+Expected:
+
+/home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Configure runner:
+
+./config.sh \
+--url https://github.com/vikasjagtap9696/heart-disease-prediction-mlops \
+--token <NEW_RUNNER_TOKEN>
+
+
+IMPORTANT:
+
+Generate a NEW runner token from:
+
+GitHub
+→ Repository
+→ Settings
+→ Actions
+→ Runners
+→ New self-hosted runner
+
+Do not use an old or expired token.
+
+Do not save or share the runner token.
+
+
+Runner name:
+
+heart-disease-ec2-runner
+
+
+Labels:
+
+self-hosted
+Linux
+X64
+
+
+Working directory:
+
+_work
+
+
+============================================================
+STEP 21 — TEST GITHUB RUNNER
+============================================================
+
+After successful configuration:
+
+./run.sh
+
+
+Expected:
+
+Connected to GitHub
+
+Listening for Jobs
+
+
+GitHub:
+
+Repository
+→ Settings
+→ Actions
+→ Runners
+
+
+Expected:
+
+heart-disease-ec2-runner
+
+Online
+
+
+IMPORTANT:
+
+Do NOT run:
+
+sudo ./config.sh
+
+Do NOT run:
+
+sudo ./run.sh
+
+Runner commands must be executed as:
+
+githubrunner
+
+
+============================================================
+STEP 22 — INSTALL RUNNER AS SERVICE
+============================================================
+
+Stop the test runner:
+
+Ctrl + C
+
+
+Exit githubrunner:
+
+exit
+
+
+Go to runner directory:
+
+cd /home/ec2-user/heart-disease-prediction-mlops/actions-runner
+
+
+Install runner service:
+
+sudo ./svc.sh install githubrunner
+
+
+Start runner service:
+
+sudo ./svc.sh start
+
+
+Check service:
+
+sudo ./svc.sh status
+
+
+Expected:
+
+active (running)
+
+
+GitHub:
+
+Repository
+→ Settings
+→ Actions
+→ Runners
+
+
+Expected:
+
+heart-disease-ec2-runner
+
+Online
+
+
+IMPORTANT:
+
+The runner configuration is performed as:
+
+githubrunner
+
+The runner service is managed using:
+
+sudo ./svc.sh start
+
+
+============================================================
+STEP 23 — TEST RUNNER USER
+============================================================
+
+Switch user:
+
+sudo su - githubrunner
+
+
+Test Docker:
+
+docker ps
+
+
+Test AWS IAM:
+
+aws sts get-caller-identity
+
+
+Both commands must work.
+
+
+Exit:
+
+exit
+
+
+============================================================
+STEP 24 — GIVE RUNNER ACCESS TO PROJECT
+============================================================
+
+Project:
+
+/home/ec2-user/heart-disease-prediction-mlops
+
+
+Allow runner to access /home/ec2-user:
+
+sudo chmod 711 /home/ec2-user
+
+
+Give project ownership to runner:
+
+sudo chown -R githubrunner:githubrunner \
+/home/ec2-user/heart-disease-prediction-mlops
+
+
+IMPORTANT:
+
+This allows the GitHub runner to checkout code,
+build Docker images and run the deployment.
+
+
+============================================================
+STEP 25 — PRODUCTION DOCKER COMPOSE
+============================================================
+
+Go to project:
+
+cd /home/ec2-user/heart-disease-prediction-mlops
+
+
+Open:
+
+vi Docker-compose.prod.yaml
+
+
+Use:
+
+services:
+
+  mlflow:
+    image: ${ECR_URI}/heart-disease-prediction-mlops:mlflow
+
+    ports:
+      - "5000:5000"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlflow-data:/app
+
+
+  training-script:
+    image: ${ECR_URI}/heart-disease-prediction-mlops:training
+
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+
+  fastapi:
+    image: ${ECR_URI}/heart-disease-prediction-mlops:fastapi
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+      training-script:
+        condition: service_completed_successfully
+
+    volumes:
+      - ./mlruns:/app/mlruns
+
+
+
+
+GitHub Actions will automatically provide:
+
+ECR_URI
+
+
+============================================================
+STEP 26 — CREATE GITHUB ACTIONS WORKFLOW
+============================================================
+
+File:
+
+.github/workflows/ci-cd.yml
+
+
+Use the following complete workflow:
+
+name: Heart Disease MLOps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: [self-hosted, Linux, X64]
+
+    permissions:
+      contents: read
+
+    env:
+      AWS_REGION: ap-south-1
+      ECR_REPOSITORY: heart-disease-prediction-mlops
+
+    steps:
+
+      # ------------------------------------------------
+      # 1. Checkout source code
+      # ------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      # ------------------------------------------------
+      # 2. Verify AWS IAM Role
+      # ------------------------------------------------
+      - name: Verify AWS Identity
+        run: |
+          aws sts get-caller-identity
+
+
+      # ------------------------------------------------
+      # 3. Login to Amazon ECR
+      # ------------------------------------------------
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      # ------------------------------------------------
+      # 4. Build FastAPI Docker Image
+      # ------------------------------------------------
+      - name: Build FastAPI image
+        run: |
+          docker build \
+            -f API/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:fastapi .
+
+
+      # ------------------------------------------------
+      # 5. Build MLflow Docker Image
+      # ------------------------------------------------
+      - name: Build MLflow image
+        run: |
+          docker build \
+            -f Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:mlflow .
+
+
+      # ------------------------------------------------
+      # 6. Build Training Docker Image
+      # ------------------------------------------------
+      - name: Build Training image
+        run: |
+          docker build \
+            -f scripts/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:training .
+
+
+      # ------------------------------------------------
+      # 7. Push FastAPI Image
+      # ------------------------------------------------
+      - name: Push FastAPI image
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:fastapi
+
+
+      # ------------------------------------------------
+      # 8. Push MLflow Image
+      # ------------------------------------------------
+      - name: Push MLflow image
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:mlflow
+
+
+      # ------------------------------------------------
+      # 9. Push Training Image
+      # ------------------------------------------------
+      - name: Push Training image
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:training
+
+
+      # ------------------------------------------------
+      # 10. Verify ECR Images
+      # ------------------------------------------------
+      - name: Verify ECR images
+        run: |
+          aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --region $AWS_REGION \
+            --query 'imageDetails[*].imageTags' \
+            --output table
+
+
+      # ------------------------------------------------
+      # 11. Deploy Application
+      # ------------------------------------------------
+      - name: Deploy application
+        run: |
+          cd /home/ec2-user/heart-disease-prediction-mlops
+
+          export ECR_URI=${{ steps.login-ecr.outputs.registry }}
+
+          echo "ECR Registry: $ECR_URI"
+
+          docker-compose -f Docker-compose.prod.yaml pull
+
+          docker-compose -f Docker-compose.prod.yaml up -d --force-recreate
+
+
+      # ------------------------------------------------
+      # 12. Verify Deployment
+      # ------------------------------------------------
+      - name: Verify application health
+        run: |
+          sleep 10
+
+          curl --fail http://localhost:8000/health
+
+          echo "FastAPI deployment successful"
+
+
+============================================================
+STEP 27 — COMMIT WORKFLOW
+============================================================
+
+On local Windows system:
+
+git add .
+
+git commit -m "Add CI CD pipeline"
+
+git push origin main
+
+
+============================================================
+STEP 28 — CHECK GITHUB ACTIONS
+============================================================
+
+GitHub:
+
+Repository
+→ Actions
+
+Open:
+
+Heart Disease MLOps CI/CD
+
+
+Expected steps:
+
+1. Checkout code
+2. Verify AWS Identity
+3. Login to Amazon ECR
+4. Build FastAPI image
+5. Build MLflow image
+6. Build Training image
+7. Push FastAPI image
+8. Push MLflow image
+9. Push Training image
+10. Verify ECR images
+11. Deploy application
+12. Verify application health
+
+
+============================================================
+STEP 29 — CHECK ECR
+============================================================
+
+AWS Console:
+
+ECR
+→ Repositories
+→ heart-disease-prediction-mlops
+
+
+Expected images:
+
+fastapi
+
+mlflow
+
+training
+
+
+These images are pushed automatically by GitHub Actions.
+
+
+============================================================
+STEP 30 — CHECK EC2 DEPLOYMENT
+============================================================
+
+GitHub Actions automatically executes:
+
+cd /home/ec2-user/heart-disease-prediction-mlops
+
+export ECR_URI=<automatic ECR registry>
+
+docker-compose -f Docker-compose.prod.yaml pull
+
+docker-compose -f Docker-compose.prod.yaml up -d --force-recreate
+
+
+IMPORTANT:
+
+After CI/CD is working, these deployment commands
+do NOT need to be executed manually.
+
+
+============================================================
+STEP 31 — VERIFY CONTAINERS
+============================================================
+
+For checking:
+
+cd /home/ec2-user/heart-disease-prediction-mlops
+
+docker-compose -f Docker-compose.prod.yaml ps
+
+
+Expected:
+
+mlflow
+training-script
+fastapi
+
+
+============================================================
+STEP 32 — VERIFY FASTAPI
+============================================================
+
+On EC2:
+
+curl http://localhost:8000/health
+
+
+Expected:
+
+{"healthy":"true"}
+
+
+From browser:
+
+http://<EC2_PUBLIC_IP>:8000
+
+
+Expected:
+
+{"message":"FastAPI server is up."}
+
+
+============================================================
+STEP 33 — TEST HTML UI
+============================================================
+
+Open the HTML UI.
+
+Set API URL:
+
+http://<EC2_PUBLIC_IP>:8000
+
+
+Enter patient values.
+
+Click:
+
+Predict
+
+
+FastAPI receives:
+
+POST /predict
+
+
+Response:
+
+{"prediction":0}
+
+or:
+
+{"prediction":1}
+
+
+============================================================
+STEP 34 — TEST COMPLETE CI/CD
+============================================================
+
+Make any project change.
+
+Example:
+
+Update README.md
+
+
+Then:
+
+git add .
+
+git commit -m "Test automatic deployment"
+
+git push origin main
+
+
+GitHub Actions automatically performs:
+
+Checkout
+→ Build
+→ ECR Push
+→ ECR Pull
+→ Docker Compose Deployment
+→ Health Check
+
+
+Do NOT manually run:
+
+docker build
+
+docker push
+
+docker pull
+
+docker-compose up
+
+
+============================================================
+STEP 35 — FINAL AUTOMATIC FLOW
+============================================================
+
+git push origin main
+
+        ↓
+
+GitHub
+
+        ↓
+
+GitHub Actions
+
+        ↓
+
+Self-Hosted EC2 Runner
+
+        ↓
+
+Checkout Code
+
+        ↓
+
+Verify IAM Role
+
+        ↓
+
+ECR Login
+
+        ↓
+
+Build Docker Images
+
+        ↓
+
+Push Images to ECR
+
+        ↓
+
+Automatically get ECR URI
+
+        ↓
+
+Docker Compose Pull
+
+        ↓
+
+Docker Compose Deploy
+
+        ↓
+
+MLflow
+Training
+FastAPI
+
+        ↓
+
+/health
+
+        ↓
+
+DEPLOYMENT SUCCESSFUL
+
+
+
+============================================================
+END
+============================================================

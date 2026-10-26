@@ -1,0 +1,437 @@
+MLOps – Basic Documentation
+
+1. What is MLOps?
+
+MLOps stands for Machine Learning Operations. It combines Machine Learning and DevOps practices to manage the complete machine learning lifecycle.
+
+MLOps helps in:
+- Training and managing ML models
+- Tracking experiments and model versions
+- Deploying ML models
+- Automating CI/CD
+- Monitoring models and applications
+- Retraining and updating models
+
+Basic MLOps Lifecycle:
+
+Data Collection
+      ↓
+Data Preparation
+      ↓
+Model Training
+      ↓
+Model Evaluation
+      ↓
+Experiment Tracking
+      ↓
+Model Registry
+      ↓
+Deployment
+      ↓
+Monitoring
+      ↓
+Retraining
+
+
+2. How MLOps Works
+
+A typical MLOps workflow is:
+
+Developer
+   ↓
+GitHub
+   ↓
+CI/CD Pipeline
+   ↓
+Model Training / Testing
+   ↓
+MLflow
+   ↓
+Docker
+   ↓
+AWS ECR
+   ↓
+AWS EC2 / EKS
+   ↓
+FastAPI
+   ↓
+ML Model
+   ↓
+Prediction
+   ↓
+Monitoring
+
+When the developer pushes code to GitHub, the CI/CD pipeline automatically tests the application and builds the Docker image. The image is stored in AWS ECR and deployed to AWS infrastructure. The ML model is exposed through an API, and monitoring tools are used to track application performance.
+
+
+3. Tools Used in MLOps
+
+1. Python
+
+Use:
+- ML model development
+- Data processing
+- Training and prediction
+- Automation scripts
+
+Common libraries:
+- Pandas
+- NumPy
+- Scikit-learn
+- Joblib
+
+
+2. Git and GitHub
+
+Use:
+- Source code management
+- Version control
+- Collaboration
+- Track code changes
+- Trigger CI/CD pipelines
+
+
+3. Scikit-learn
+
+Use:
+- Data preprocessing
+- Model training
+- Model evaluation
+- Prediction
+
+It provides common ML algorithms such as Linear Regression, Logistic Regression, Decision Tree, Random Forest, etc.
+
+
+4. MLflow
+
+MLflow is an MLOps platform used to manage machine learning experiments and models.
+
+Use:
+- Experiment tracking
+- Track parameters
+- Track metrics
+- Store model artifacts
+- Model versioning
+- Model Registry
+
+Example:
+If we train the same model with different parameters, MLflow stores the results so that we can compare different experiments and manage model versions.
+
+
+5. FastAPI
+
+FastAPI is used to create an API for the ML model.
+
+Use:
+- Receive input from users/applications
+- Send input to the ML model
+- Return predictions
+
+Example:
+
+Application
+   ↓
+FastAPI
+   ↓
+ML Model
+   ↓
+Prediction
+
+
+6. Docker
+
+Docker is used to package the ML application and its dependencies into a container.
+
+Use:
+- Containerization
+- Consistent environment
+- Easy deployment
+- Dependency management
+- Portability
+
+Example:
+
+Application + Python + Libraries + Model
+              ↓
+          Docker Image
+              ↓
+        Docker Container
+
+
+7. GitHub Actions
+
+GitHub Actions is used for CI/CD automation.
+
+CI:
+- Checkout source code
+- Install dependencies
+- Run tests
+- Build application
+
+CD:
+- Build Docker image
+- Push image to AWS ECR
+- Deploy application to AWS
+
+
+8. AWS ECR
+
+Amazon Elastic Container Registry (ECR) is used to store Docker images.
+
+Workflow:
+
+GitHub Actions
+      ↓
+Docker Image
+      ↓
+AWS ECR
+      ↓
+AWS EC2 / EKS
+
+
+9. AWS EC2
+
+EC2 provides virtual servers to run the ML application.
+
+A Dockerized FastAPI application can be deployed on EC2.
+
+
+10. Amazon S3
+
+S3 can be used to store:
+- Training datasets
+- Model files
+- Model artifacts
+- Backup files
+- Other ML-related files
+
+
+11. AWS CloudWatch
+
+CloudWatch is used for AWS and application monitoring.
+
+Use:
+- Logs
+- CPU monitoring
+- Memory/application metrics where configured
+- Errors
+- Alarms
+
+
+12. Prometheus
+
+Prometheus is used to collect monitoring metrics.
+
+Use:
+- API request metrics
+- Response time
+- Error rate
+- CPU and memory metrics
+- Application metrics
+
+
+13. Grafana
+
+Grafana is used to create dashboards from monitoring data.
+
+Example:
+
+Application
+    ↓
+Prometheus
+    ↓
+Grafana Dashboard
+
+
+14. Kubernetes / Amazon EKS
+
+Kubernetes is used for container orchestration.
+
+Use:
+- Container management
+- Scaling
+- High availability
+- Rolling deployments
+- Self-healing
+
+Amazon EKS is the AWS managed Kubernetes service.
+
+Kubernetes/EKS can be added in the advanced stage.
+
+
+15. Terraform
+
+Terraform is an Infrastructure as Code (IaC) tool.
+
+Use:
+- Create AWS infrastructure using code
+- VPC
+- EC2
+- IAM
+- ECR
+- S3
+- Load Balancer
+- EKS
+
+Terraform reduces manual infrastructure configuration.
+
+
+4. Recommended MLOps Tech Stack
+
+Programming:
+Python
+
+Machine Learning:
+Scikit-learn
+
+Version Control:
+Git + GitHub
+
+Experiment Tracking:
+MLflow
+
+API:
+FastAPI
+
+Containerization:
+Docker
+
+CI/CD:
+GitHub Actions
+
+Cloud:
+AWS
+
+Storage:
+Amazon S3
+
+Container Registry:
+AWS ECR
+
+Compute:
+AWS EC2
+
+Monitoring:
+AWS CloudWatch / Prometheus + Grafana
+
+Infrastructure as Code:
+Terraform
+
+Advanced Orchestration:
+Kubernetes / Amazon EKS
+
+
+5. Proposed Basic MLOps Project
+
+Project: Employee Salary Prediction
+
+Flow:
+
+Dataset
+   ↓
+Python + Pandas
+   ↓
+Scikit-learn Model Training
+   ↓
+Model Evaluation
+   ↓
+MLflow
+   ↓
+FastAPI
+   ↓
+Docker
+   ↓
+GitHub Actions
+   ↓
+AWS ECR
+   ↓
+AWS EC2
+   ↓
+Prediction API
+   ↓
+CloudWatch / Prometheus + Grafana
+
+
+6. Project Working
+
+Step 1: Collect the dataset and store it locally or in Amazon S3.
+
+Step 2: Clean and prepare the data using Python and Pandas.
+
+Step 3: Train the ML model using Scikit-learn.
+
+Step 4: Evaluate the model using suitable ML metrics.
+
+Step 5: Track experiments, parameters, metrics, and models using MLflow.
+
+Step 6: Create a FastAPI application to expose the model through an API.
+
+Step 7: Create a Docker image containing the application, dependencies, and model.
+
+Step 8: Use GitHub Actions to automate testing, Docker image building, and deployment.
+
+Step 9: Push the Docker image to AWS ECR.
+
+Step 10: Deploy the application on AWS EC2.
+
+Step 11: Monitor the application using CloudWatch or Prometheus and Grafana.
+
+Step 12: When new data is available or model performance decreases, retrain the model and deploy the new model version.
+
+
+7. Basic Tools to Use for the Project
+
+For the first MLOps project, the recommended tools are:
+
+Python
+Scikit-learn
+Git
+GitHub
+MLflow
+FastAPI
+Docker
+GitHub Actions
+AWS S3
+AWS ECR
+AWS EC2
+AWS CloudWatch
+
+After completing the basic project, the following can be added:
+
+Terraform
+Kubernetes / EKS
+Prometheus
+Grafana
+Airflow
+Model Drift Detection
+Data Drift Detection
+Automated Retraining
+
+
+8. Final Architecture
+
+GitHub
+   ↓
+GitHub Actions
+   ↓
+Testing
+   ↓
+Docker Build
+   ↓
+AWS ECR
+   ↓
+AWS EC2
+   ↓
+FastAPI
+   ↓
+ML Model
+   ↓
+Prediction
+   ↓
+CloudWatch / Prometheus
+   ↓
+Grafana
+
+MLflow is used during the ML training process for experiment tracking and model version management.
+
+This architecture provides an end-to-end MLOps workflow covering Machine Learning, CI/CD, Docker, AWS deployment, model management, and monitoring.

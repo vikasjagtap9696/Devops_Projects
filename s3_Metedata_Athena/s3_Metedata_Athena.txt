@@ -1,0 +1,212 @@
+
+===========================================
+*****S3 Metadata and Athena*****
+===========================================
+**Amazon S3 Metadata**:
+--------------------
+
+	Amazon S3 Metadata provides automatically generated metadata about objects stored in an S3 bucket.
+	It helps users discover, query, analyze, and track S3 objects without manually scanning the bucket.
+
+	. Automatically collects metadata about S3 objects.
+	. Stores metadata in managed Apache Iceberg tables.
+	. Metadata can be queried using Amazon Athena.
+	. Provides near real-time information about objects.
+	. Useful for data discovery, auditing, and analytics.
+	
+#Important Metadata Information:
+
+	S3 Metadata can provide information such as:
+     .Bucket name
+	 .Object key / file name
+	 .Object size
+	 .Last modified date
+	 .Version information
+   	 .Encryption information
+	 .Object status and other attributes
+
+#S3 Metadata Tables:
+
+	There are three important tables:
+
+	1. Journal Table:
+	Tracks changes to S3 objects.
+	Use: Auditing, security, and compliance.
+
+	2. Live Inventory Table
+	Contains the latest metadata for objects in the bucket.
+	Use: Object discovery and analytics.
+
+	3. Annotation Table:
+	Contains annotations associated with objects.
+	Use: Search, discovery, and analytics.
+	
+**Amazon Athena**:
+===================
+	.Amazon Athena is a serverless SQL query service that allows users to analyze data stored
+	in Amazon S3 without managing servers or databases.
+	.It does not require servers or infrastructure management.	
+		
+#What is Amazon Athena?
+	 .Serverless query service from AWS.
+	 .Uses SQL to query data.
+	 .Can directly query data stored in Amazon S3.
+ 	 .No database server installation or management required.
+	 .Supports data analysis and reporting.
+			
+#How Athena Works:
+
+		Data stored in S3
+        	  ↓
+		AWS Glue Data Catalog
+		   	  ↓
+		Amazon Athena
+		      ↓
+		SQL Query
+		      ↓
+		Query Results
+				
+    .Athena reads the data from S3 and executes SQL queries against it.
+ 
+#Supported Data Formats:
+		.CSV
+		.JSON
+		.Parquet
+		.ORC
+		.Avro
+		.Apache Iceberg tables
+	
+#Advantages of Athena:
+	.Serverless — no infrastructure to manage.
+	.SQL-based — easy for users familiar with SQL.
+	.Directly queries data in S3.
+    .Integrates with AWS Glue Data Catalog.
+	.Supports multiple data formats.
+	.Suitable for data analysis and reporting.
+	.Pay based on data scanned by queries.
+
+#AWS Glue Data Catalog:
+
+    .Athena uses the AWS Glue Data Catalog to store table definitions and schemas.	
+	   
+	Example:
+	   
+	    Database
+            ↓
+        employees table
+            ↓
+        Columns:
+          id
+          name
+          department
+	      salary
+		
+		
+		
+
+====================
+Practical:
+==================
+
+step 1:  Create One Private S3 Bucket metadata-bkt-03 create one Folder data --->
+
+			Upload one .csv file in data folder in S3 Bucket.
+
+step 2: Click on Metadata ---> Click Create metadata configuration ---
+
+       -->Disable this option Annotation table (default this is Enable) -->Click on Create metadata configuration
+	   
+step 3:  After that Wait for Journal table and Live inventory table is Activated -->After sum Time it will show 
+         one popup message like ->Enable integration --> click it--> After Click Table Bucket is Created -->
+		 Do  not click anywhere --> Go back to General purpose buckets --> click on Metadata.
+-------------------------------------------------------------------------------------------------------------------------------
+step 4: Go To The Athena Service--> Click on Queri Editor on Left side -->Click on Catalog  left Side of Query Editor-->
+          select s3tablecatalog/aws-s3  --->Database → Choose a database -->b_metadata-bkt-03.
+
+step 5 :  past below query in query editor-->
+
+           SELECT *
+           FROM inventory
+           LIMIT 10;		  
+		 
+		 It will Show up one popup message click on Edit Setting-->Click on Manage--->
+		 Location of query result -->s3://Your s3 Bucket Name/athena-results/ Put this -->Save it -->Go to Editor tab-->
+         Click on Run Button-->  It will Show the Result Below.
+
+step 6 :  SELECT bucket, key, size, last_modified_date
+          FROM inventory
+          WHERE key LIKE '%.csv';  
+
+            Past this above Query and run it again.
+	       This query shows:
+				.Bucket → S3 bucket name
+				.Key → Object/file name
+				.Size → File size
+				.Last Modified Date → Last modification time		
+		 
+		 
+step 7 :    SELECT COUNT(*) AS total_objects
+            FROM inventory;
+			
+			Past this above Query and Run it again.
+			It Will show you: Count of Object from inventory.
+			
+step 8 :    SELECT *FROM journal LIMIT 10;	
+           
+		    It will show all the changes in object like as a Update/delete/upload.
+	
+--------------------------------------------------------------------------------------------------------------------------			
+step 9 : now open new tab of Query Editor--> Left side Data source select -->AwsDatacatalog.
+         Catalog -->select None.
+         now run this query in query editor  --> CREATE DATABASE devopsdb;	--->After that it will show on left side 
+          database click on that --> select devopsdb.
+
+step 10 : Create table in that database copy below query and run.
+					
+		    CREATE EXTERNAL TABLE employees (
+				id INT,
+				name STRING,
+				department STRING,
+				role STRING,
+				salary INT,
+				city STRING,
+				joining_date STRING
+			)
+			ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+			WITH SERDEPROPERTIES (
+				'separatorChar' = ',',
+				'quoteChar' = '"'
+			)
+			STORED AS TEXTFILE
+			LOCATION 's3://metadata-bkt-03/data/'     ---------->your s3 bucket name only.
+			TBLPROPERTIES (
+				'skip.header.line.count'='1'
+			);
+         
+             past in query editor and run it.
+			 one employee table will be created.
+			 
+step 11 : Fetch data from .csv file 
+          
+				 SELECT *
+				FROM employees
+				LIMIT 10;
+				
+				Run this Query. It will show you a all data in .csv file.
+				
+step 12 :       SELECT
+		 		department,
+				COUNT(*) AS employee_count,
+				AVG(salary) AS average_salary
+				FROM employees
+				GROUP BY department
+				ORDER BY employee_count DESC;
+				
+				
+				IT will show all Department Employees and salary.
+
+			 
+         
+	
+	  
+

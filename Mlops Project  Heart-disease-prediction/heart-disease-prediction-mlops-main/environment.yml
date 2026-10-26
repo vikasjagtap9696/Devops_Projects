@@ -1,0 +1,16 @@
+name : mlops_project_1
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.12
+  - scikit-learn
+  - pandas
+  - pyaml
+  - xgboost
+  - fastapi
+  - pydantic
+  - pip
+  - pip:
+    - mlflow
